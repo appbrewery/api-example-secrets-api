@@ -496,7 +496,7 @@ app.post("/register", (req, res) => {
 app.get("/generate-api-key", async (req, res) => {
   const token = crypto.randomUUID();
   // localStorage.clear();
-  let keys = JSON.parse(localStorage.getItem("apiKeys") || []);
+  let keys = JSON.parse(localStorage.getItem("apiKeys")) || [];
   keys.push(token);
   localStorage.setItem("apiKeys", JSON.stringify(keys));
   res.json({ apiKey: token });

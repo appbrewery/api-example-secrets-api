@@ -24,6 +24,11 @@ function authenticate(username, password) {
       password,
       localStorage.getItem(username)
     );
+    if (passwordMatches) {
+      const userSecrets = db.users.getSecrets(username) || [];
+      console.log(userSecrets);
+      data.secrets = data.secrets.concat(userSecrets);
+    }
     return passwordMatches;
   } else {
     return false;
@@ -63,6 +68,9 @@ const limiter = limit.rateLimit({
 app.use(limiter);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.set("view engine", "html");
+app.set("views", __dirname + "/views");
+app.engine("html", require("ejs").renderFile);
 
 let data = {
   secrets: [
@@ -471,14 +479,12 @@ let data = {
 
 //Index page
 app.get("/", (req, res) => {
-  res.send(
-    "Welcome to the secrets API. Check the documentation to see how to interact with this API."
-  );
+  res.render("index.html");
 });
 
 app.post("/register", (req, res) => {
-  const username = req.query.username;
-  const password = req.query.password;
+  const username = req.body.username;
+  const password = req.body.password;
   if (localStorage.getItem(username)) {
     res.status(401).json({ error: "Username is already taken." });
   }
@@ -498,8 +504,8 @@ app.get("/generate-api-key", async (req, res) => {
 });
 
 app.post("/get-auth-token", (req, res) => {
-  const username = req.query.username;
-  const password = req.query.password;
+  const username = req.body.username;
+  const password = req.body.password;
   if (!localStorage.getItem(username)) {
     res.status(404).json({ error: "User does not exist." });
   }
@@ -552,11 +558,12 @@ app.get("/filter", apiAuth, (req, res) => {
 
 // Route to retrieve a specific secret by username
 app.get(
-  "/user",
+  "/user-secrets",
   passport.authenticate("bearer", { session: false }),
   (req, res) => {
     const user = req.user.username;
     const filteredSecrets = db.users.getSecrets(user);
+    console.log(filteredSecrets);
     if (filteredSecrets.length > 0) {
       res.json(filteredSecrets);
     } else {
@@ -582,7 +589,7 @@ app.get(
 
 //POST
 app.post(
-  "/submit",
+  "/secrets",
   passport.authenticate("bearer", { session: false }),
   (req, res) => {
     const username = req.user.username;
@@ -616,14 +623,14 @@ app.post(
     }
     db.users.addSecret(username, newData);
 
-    res.sendStatus(200);
+    res.status(200).json(newData);
   }
 );
 
 //PUT
 
 app.put(
-  "/update-secret/:id",
+  "/secrets/:id",
   passport.authenticate("bearer", { session: false }),
   (req, res) => {
     const searchId = parseInt(req.params.id);
@@ -640,7 +647,7 @@ app.put(
         .replace("T", " ")}`,
     };
     if (db.users.updateRecord(user, searchId, newData)) {
-      res.sendStatus(200);
+      res.status(200).json(newData);
     } else {
       res.status(404).json({
         error: `Cannot update resource, given secret with id ${searchId} not found.`,
@@ -652,7 +659,7 @@ app.put(
 //PATCH
 
 app.patch(
-  "/update-secret/:id",
+  "/secrets/:id",
   passport.authenticate("bearer", { session: false }),
   (req, res) => {
     const searchId = parseInt(req.params.id);
@@ -677,7 +684,7 @@ app.patch(
     };
 
     if (db.users.updateRecord(user, searchId, newData)) {
-      res.sendStatus(200);
+      res.status(200).json({ newData });
     } else {
       res.status(404).json({ error: "Cannot update record." });
     }
@@ -686,7 +693,7 @@ app.patch(
 
 //DELETE
 app.delete(
-  "/delete/:id",
+  "/secrets/:id",
   passport.authenticate("bearer", { session: false }),
   (req, res) => {
     const searchId = parseInt(req.params.id);
@@ -699,7 +706,9 @@ app.delete(
     const result = db.users.deleteSecretWithId(user, searchId);
     console.log("result", result);
     if (result) {
-      res.sendStatus(200);
+      res.status(200).json({
+        message: `Secret with ID ${searchId} has been deleted successfully.`,
+      });
     } else {
       res.status(404).json({
         error: `There was an issue deleting this resource.`,

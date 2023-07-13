@@ -10,12 +10,18 @@ const db = require("./db");
 
 const localStorage = new store.LocalStorage("./scratch");
 const app = express();
+let functionalData = [];
 
 //Auth methods
 const basicAuth = expressBasicAuth({
   authorizer: authenticate,
   unauthorizedResponse: "Error: Incorrect username or password.",
 });
+
+function computeFunctionalData(username) {
+  const userSecrets = db.users.getSecrets(username) || [];
+  functionalData = data.secrets.concat(userSecrets);
+}
 
 function authenticate(username, password) {
   const pass = localStorage.getItem(username);
@@ -24,11 +30,7 @@ function authenticate(username, password) {
       password,
       localStorage.getItem(username)
     );
-    if (passwordMatches) {
-      const userSecrets = db.users.getSecrets(username) || [];
-      console.log(userSecrets);
-      data.secrets = data.secrets.concat(userSecrets);
-    }
+    if (passwordMatches) computeFunctionalData(username);
     return passwordMatches;
   } else {
     return false;
@@ -482,14 +484,28 @@ app.get("/", (req, res) => {
   res.render("index.html");
 });
 
+app.get(
+  "/clear",
+  passport.authenticate("bearer", { session: false }),
+  (req, res) => {
+    if (req.user !== "angela") {
+      res.send(401);
+    } else {
+      localStorage = new store.LocalStorage("./scratch");
+      db.users.deleteRecords();
+    }
+  }
+);
+
 app.post("/register", (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
   if (localStorage.getItem(username)) {
     res.status(401).json({ error: "Username is already taken." });
+  } else {
+    localStorage.setItem(username, password);
+    res.status(200).json({ success: "Successfully registered." });
   }
-  localStorage.setItem(username, password);
-  res.status(200).json({ success: "Successfully registered." });
 });
 
 //Get API Key
@@ -535,9 +551,9 @@ app.get("/random", (req, res) => {
 app.get("/all", basicAuth, (req, res) => {
   const page = req.query.page;
   if (page) {
-    res.json(data.secrets.slice((page - 1) * 10, page * 10));
+    res.json(functionalData.slice((page - 1) * 10, page * 10));
   } else {
-    res.json(data.secrets.slice(0, 9));
+    res.json(functionalData.slice(0, 9));
   }
 });
 
@@ -579,10 +595,9 @@ app.get(
   "/secrets/:id",
   passport.authenticate("bearer", { session: false }),
   (req, res) => {
+    computeFunctionalData(req.user.username);
     const id = req.params.id;
-    const userSecrets = db.users.getSecrets(req.user.username) || [];
-    data.secrets = data.secrets.concat(userSecrets);
-    const secret = data.secrets.find((secret) => secret.id === parseInt(id));
+    const secret = functionalData.find((secret) => secret.id === parseInt(id));
     secret
       ? res.json(secret)
       : res.status(404).json({ error: "Secret not found for the given id." });

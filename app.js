@@ -535,7 +535,7 @@ app.get("/random", (req, res) => {
 app.get("/all", basicAuth, (req, res) => {
   const page = req.query.page;
   if (page) {
-    res.json(data.secrets.slice((page - 1) * 10 - 1, page * 10 - 1));
+    res.json(data.secrets.slice((page - 1) * 10, page * 10 - 1));
   } else {
     res.json(data.secrets.slice(0, 9));
   }

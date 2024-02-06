@@ -48,7 +48,6 @@ exports.updateRecord = function (username, id, newData) {
         }
       }
     }
-    return false;
   }
 };
 

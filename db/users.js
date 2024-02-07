@@ -49,6 +49,7 @@ exports.updateRecord = function (username, id, newData) {
       }
     }
   }
+  return false;
 };
 
 exports.checkAlreadyHasToken = function (username) {
@@ -85,6 +86,7 @@ exports.getSecretById = function (username, id) {
       }
     }
   }
+  return false;
 };
 
 exports.deleteSecretWithId = function (username, id) {
@@ -104,6 +106,7 @@ exports.deleteSecretWithId = function (username, id) {
       }
     }
   }
+  return false;
 };
 
 exports.deleteRecords = function () {

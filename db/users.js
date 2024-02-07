@@ -84,7 +84,6 @@ exports.getSecretById = function (username, id) {
         }
       }
     }
-    return false;
   }
 };
 
@@ -104,7 +103,6 @@ exports.deleteSecretWithId = function (username, id) {
         }
       }
     }
-    return false;
   }
 };
 
